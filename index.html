@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -7,20 +6,26 @@
   <style>
     body {
       font-family: 'STKaiti', 'KaiTi', '楷体', serif;
-      background: #f8f9fa;
       color: #333;
       line-height: 1.8;
       padding: 15px;
       max-width: 800px;
       margin: 0 auto;
-      background-image: url('image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%23e9f7ef"/><path d="M0,50 Q25,40 50,50 T100,50" stroke="%23c1e1c5" stroke-width="0.5" fill="none"/></svg>');
+      /* 🌟 关键修改1：直接使用全家福背景 */
+      background-image: url('Max.jpg') !important;
+      background-size: cover !important;
+      background-position: center !important;
       background-attachment: fixed;
+      /* 半透明白色遮罩（确保文字可读） */
+      background-color: rgba(248, 249, 250, 0.92) !important;
+      background-blend-mode: overlay !important;
     }
     .container {
       background: white;
       padding: 35px 25px;
       border-radius: 15px;
-      box-shadow: 0 5px 25px rgba(0,0,0,0.07);
+      /* 🌟 关键修改2：增强阴影适应深色背景 */
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
       position: relative;
       margin-top: 15px;
     }
@@ -95,15 +100,6 @@
       padding: 0 4px;
       border-radius: 3px;
     }
-    .ball-icon {
-      display: inline-block;
-      width: 18px;
-      height: 18px;
-      background: radial-gradient(circle, #ff9800 60%, #e65100 100%);
-      border-radius: 50%;
-      margin: 0 3px;
-      vertical-align: middle;
-    }
     @media (max-width: 600px) {
       .container {
         padding: 25px 18px;
@@ -173,25 +169,21 @@
     </div>
   </div>
 
-<script>
-    // 声明全局变量（避免重复创建音频对象）
+ <script>
+    // 🌟 关键修改3：精简JS（移除背景切换逻辑，保留核心播放功能）
     let audio = null;
     let isPlaying = false;
     
     document.getElementById('play-btn').addEventListener('click', function(e) {
-      e.stopPropagation(); // 阻止事件冒泡
+      e.stopPropagation();
       
-      // 首次点击：初始化音频
       if (!audio) {
-        audio = new Audio('muhsee.m4a'); // 已修改文件名
-        
-        // 权限处理
+        audio = new Audio('muhsee.m4a');
         audio.play().then(() => {
           setupPlayback(this);
         }).catch(e => {
           if (e.name === 'NotAllowedError') {
             showPermissionAlert();
-            // 绑定用户手势解锁
             document.body.addEventListener('click', unlockAudio.bind(this), { once: true });
           } else {
             alert('音频加载失败：' + e.message);
@@ -200,31 +192,22 @@
         return;
       }
       
-      // 后续点击：切换播放/暂停
       togglePlayback(this);
     });
     
     function unlockAudio() {
-      if (audio) {
-        audio.play().then(() => {
-          setupPlayback(this);
-        }).catch(e => {
-          console.log('Unlock failed:', e);
-        });
-      }
+      if (audio) audio.play().catch(e => console.log('Unlock failed:', e));
     }
     
     function setupPlayback(btn) {
       isPlaying = true;
       updateButtonUI(btn, true);
       
-      // 播放结束自动重置
       audio.onended = () => {
         isPlaying = false;
         updateButtonUI(btn, false);
       };
       
-      // 错误处理
       audio.onerror = () => {
         alert('音频文件加载失败！\n请确认：\n1. 文件名是 muhsee.m4a\n2. 与本HTML文件在同一文件夹');
       };
@@ -233,24 +216,15 @@
     function togglePlayback(btn) {
       if (!audio) return;
       
-      if (isPlaying) {
-        audio.pause();
-      } else {
-        audio.play().catch(e => {
-          if (e.name === 'NotAllowedError') {
-            showPermissionAlert();
-          }
-        });
-      }
+      if (isPlaying) audio.pause();
+      else audio.play().catch(e => e.name === 'NotAllowedError' && showPermissionAlert());
       
       isPlaying = !isPlaying;
       updateButtonUI(btn, isPlaying);
     }
     
     function updateButtonUI(btn, playing) {
-      btn.textContent = playing ? 
-        '🔊 播放中... (点击暂停)' : 
-        '🎧 重新播放信件';
+      btn.textContent = playing ? '🔊 播放中... (点击暂停)' : '🎧 重新播放信件';
       btn.style.background = playing ? '#ff9800' : '#4CAF50';
       btn.style.boxShadow = playing ? 
         '0 4px 12px rgba(255, 152, 0, 0.4)' : 
@@ -265,11 +239,8 @@
       }
     }
     
-    // 防止页面其他点击干扰
     document.body.addEventListener('click', function(e) {
-      if (e.target !== document.getElementById('play-btn')) {
-        e.stopPropagation();
-      }
+      if (e.target !== document.getElementById('play-btn')) e.stopPropagation();
     }, true);
   </script>
 </body>

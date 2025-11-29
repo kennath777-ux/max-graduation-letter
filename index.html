@@ -165,71 +165,103 @@
   </div>
 
   <script>
-    document.getElementById('play-btn').addEventListener('click', function() {
-      const audio = new Audio('muhsee.m4a');
+    // 声明全局变量（避免重复创建音频对象）
+    let audio = null;
+    let isPlaying = false;
+    
+    document.getElementById('play-btn').addEventListener('click', function(e) {
+      e.stopPropagation(); // 阻止事件冒泡
       
-      // 首次播放尝试
-      audio.play().then(() => {
-        setupPlayback(audio, this);
-      }).catch(e => {
-        // 权限被拒绝时
-        if (e.name === 'NotAllowedError') {
-          alert('请允许浏览器播放音频！\n→ 点击地址栏的"🔊"图标\n→ 选择"允许"');
-          
-          // 绑定用户手势事件（解决自动播放限制）
-          document.body.removeEventListener('click', initAudio);
-          document.body.addEventListener('click', initAudio);
-          
-          function initAudio() {
-            audio.play().then(() => {
-              setupPlayback(audio, this);
-              document.body.removeEventListener('click', initAudio);
-            }).catch(e => console.log('Audio play failed:', e));
+      // 首次点击：初始化音频
+      if (!audio) {
+        audio = new Audio('muhsee.m4a'); // 已修改文件名
+        
+        // 权限处理
+        audio.play().then(() => {
+          setupPlayback(this);
+        }).catch(e => {
+          if (e.name === 'NotAllowedError') {
+            showPermissionAlert();
+            // 绑定用户手势解锁
+            document.body.addEventListener('click', unlockAudio.bind(this), { once: true });
+          } else {
+            alert('音频加载失败：' + e.message);
           }
-        } else {
-          alert('音频加载失败：' + e.message + '\n请确认文件名是 muhsee.m4a 且与本页同目录');
-        }
-      });
+        });
+        return;
+      }
+      
+      // 后续点击：切换播放/暂停
+      togglePlayback(this);
     });
     
-    function setupPlayback(audio, btn) {
-      btn.textContent = '🔊 播放中... (点击此处暂停)';
-      btn.style.background = '#ff9800';
-      btn.style.boxShadow = '0 4px 12px rgba(255, 152, 0, 0.4)';
+    function unlockAudio() {
+      if (audio) {
+        audio.play().then(() => {
+          setupPlayback(this);
+        }).catch(e => {
+          console.log('Unlock failed:', e);
+        });
+      }
+    }
+    
+    function setupPlayback(btn) {
+      isPlaying = true;
+      updateButtonUI(btn, true);
       
-      let isPlaying = true;
-      
-      // 暂停/继续切换
-      btn.onclick = function(e) {
-        e.stopPropagation();
-        if (isPlaying) {
-          audio.pause();
-        } else {
-          audio.play();
-        }
-        isPlaying = !isPlaying;
-        this.textContent = isPlaying ? 
-          '🔊 播放中... (点击此处暂停)' : 
-          '🎧 重新播放信件';
-        this.style.background = isPlaying ? '#ff9800' : '#4CAF50';
-        this.style.boxShadow = isPlaying ? 
-          '0 4px 12px rgba(255, 152, 0, 0.4)' : 
-          '0 4px 10px rgba(76, 175, 80, 0.35)';
-      };
-      
-      // 播放结束回调
-      audio.onended = function() {
-        btn.textContent = '🎧 重新播放信件';
-        btn.style.background = '#4CAF50';
-        btn.style.boxShadow = '0 4px 10px rgba(76, 175, 80, 0.35)';
+      // 播放结束自动重置
+      audio.onended = () => {
         isPlaying = false;
+        updateButtonUI(btn, false);
       };
       
-      // 播放错误处理
-      audio.onerror = function() {
-        alert('音频文件加载失败！\n请确认：\n1. 文件名是 muhsee.m4a\n2. 与本HTML文件在同一文件夹\n3. 文件大小小于25MB');
+      // 错误处理
+      audio.onerror = () => {
+        alert('音频文件加载失败！\n请确认：\n1. 文件名是 muhsee.m4a\n2. 与本HTML文件在同一文件夹');
       };
     }
+    
+    function togglePlayback(btn) {
+      if (!audio) return;
+      
+      if (isPlaying) {
+        audio.pause();
+      } else {
+        audio.play().catch(e => {
+          if (e.name === 'NotAllowedError') {
+            showPermissionAlert();
+          }
+        });
+      }
+      
+      isPlaying = !isPlaying;
+      updateButtonUI(btn, isPlaying);
+    }
+    
+    function updateButtonUI(btn, playing) {
+      btn.textContent = playing ? 
+        '🔊 播放中... (点击暂停)' : 
+        '🎧 重新播放信件';
+      btn.style.background = playing ? '#ff9800' : '#4CAF50';
+      btn.style.boxShadow = playing ? 
+        '0 4px 12px rgba(255, 152, 0, 0.4)' : 
+        '0 4px 10px rgba(76, 175, 80, 0.35)';
+    }
+    
+    function showPermissionAlert() {
+      if (/Android|iPhone|iPad/i.test(navigator.userAgent)) {
+        alert('📱 手机使用指南：\n1. 点击地址栏的"⋮"或"锁"图标\n2. 选择"网站设置"\n3. 将"声音"设为"允许"');
+      } else {
+        alert('💻 电脑使用指南：\n点击地址栏的"🔊"或"麦克风"图标\n选择"允许"播放声音');
+      }
+    }
+    
+    // 防止页面其他点击干扰
+    document.body.addEventListener('click', function(e) {
+      if (e.target !== document.getElementById('play-btn')) {
+        e.stopPropagation();
+      }
+    }, true);
   </script>
 </body>
 </html>
